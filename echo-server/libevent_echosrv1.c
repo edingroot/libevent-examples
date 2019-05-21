@@ -59,15 +59,15 @@
  * A struct for client specific data, in this simple case the only
  * client specific data is the read event.
  */
-struct client {
+struct client
+{
 	struct event ev_read;
 };
 
 /**
  * Set a socket to non-blocking mode.
  */
-int
-setnonblock(int fd)
+int setnonblock(int fd)
 {
 	int flags;
 
@@ -78,48 +78,50 @@ setnonblock(int fd)
 	if (fcntl(fd, F_SETFL, flags) < 0)
 		return -1;
 
-        return 0;
+	return 0;
 }
 
 /**
  * This function will be called by libevent when the client socket is
  * ready for reading.
  */
-void
-on_read(int fd, short ev, void *arg)
+void on_read(int fd, short ev, void *arg)
 {
 	struct client *client = (struct client *)arg;
 	u_char buf[8196];
 	int len, wlen;
 
-        len = read(fd, buf, sizeof(buf));
-	if (len == 0) {
+	len = read(fd, buf, sizeof(buf));
+	if (len == 0)
+	{
 		/* Client disconnected, remove the read event and the
 		 * free the client structure. */
 		printf("Client disconnected.\n");
-                close(fd);
+		close(fd);
 		event_del(&client->ev_read);
 		free(client);
 		return;
 	}
-	else if (len < 0) {
+	else if (len < 0)
+	{
 		/* Some other error occurred, close the socket, remove
 		 * the event and free the client structure. */
 		printf("Socket failure, disconnecting client: %s",
-		    strerror(errno));
+			   strerror(errno));
 		close(fd);
 		event_del(&client->ev_read);
 		free(client);
 		return;
 	}
 
-        /* XXX For the sake of simplicity we'll echo the data write
+	/* XXX For the sake of simplicity we'll echo the data write
          * back to the client.  Normally we shouldn't do this in a
          * non-blocking app, we should queue the data and wait to be
          * told that we can write.
          */
-        wlen = write(fd, buf, len);
-        if (wlen < len) {
+	wlen = write(fd, buf, len);
+	if (wlen < len)
+	{
 		/* We didn't write all our data.  If we had proper
 		 * queueing/buffering setup, we'd finish off the write
 		 * when told we can write again.  For this simple case
@@ -127,15 +129,14 @@ on_read(int fd, short ev, void *arg)
 		 * write.
 		 */
 		printf("Short write, not all data echoed back to client.\n");
-        }
+	}
 }
 
 /**
  * This function will be called by libevent when there is a connection
  * ready to be accepted.
  */
-void
-on_accept(int fd, short ev, void *arg)
+void on_accept(int fd, short ev, void *arg)
 {
 	int client_fd;
 	struct sockaddr_in client_addr;
@@ -144,7 +145,8 @@ on_accept(int fd, short ev, void *arg)
 
 	/* Accept the new connection. */
 	client_fd = accept(fd, (struct sockaddr *)&client_addr, &client_len);
-	if (client_fd == -1) {
+	if (client_fd == -1)
+	{
 		warn("accept failed");
 		return;
 	}
@@ -163,19 +165,18 @@ on_accept(int fd, short ev, void *arg)
 	 * the clients socket becomes read ready.  We also make the
 	 * read event persistent so we don't have to re-add after each
 	 * read. */
-	event_set(&client->ev_read, client_fd, EV_READ|EV_PERSIST, on_read, 
-	    client);
+	event_set(&client->ev_read, client_fd, EV_READ | EV_PERSIST, on_read,
+			  client);
 
 	/* Setting up the event does not activate, add the event so it
 	 * becomes active. */
 	event_add(&client->ev_read, NULL);
 
 	printf("Accepted connection from %s\n",
-               inet_ntoa(client_addr.sin_addr));
+		   inet_ntoa(client_addr.sin_addr));
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	int listen_fd;
 	struct sockaddr_in listen_addr;
@@ -192,15 +193,15 @@ main(int argc, char **argv)
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_fd < 0)
 		err(1, "listen failed");
-	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on, 
-		sizeof(reuseaddr_on)) == -1)
+	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on,
+				   sizeof(reuseaddr_on)) == -1)
 		err(1, "setsockopt failed");
 	memset(&listen_addr, 0, sizeof(listen_addr));
 	listen_addr.sin_family = AF_INET;
 	listen_addr.sin_addr.s_addr = INADDR_ANY;
 	listen_addr.sin_port = htons(SERVER_PORT);
 	if (bind(listen_fd, (struct sockaddr *)&listen_addr,
-		sizeof(listen_addr)) < 0)
+			 sizeof(listen_addr)) < 0)
 		err(1, "bind failed");
 	if (listen(listen_fd, 5) < 0)
 		err(1, "listen failed");
@@ -212,7 +213,7 @@ main(int argc, char **argv)
 
 	/* We now have a listening socket, we create a read event to
 	 * be notified when a client connects. */
-	event_set(&ev_accept, listen_fd, EV_READ|EV_PERSIST, on_accept, NULL);
+	event_set(&ev_accept, listen_fd, EV_READ | EV_PERSIST, on_accept, NULL);
 	event_add(&ev_accept, NULL);
 
 	/* Start the libevent event loop. */

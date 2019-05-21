@@ -1,5 +1,6 @@
-CFLAGS =	-I$(LIBEVENT) -Wall
-LIBS =		$(LIBEVENT)/.libs/libevent.a -lrt
+CFLAGS=-I$(LIBEVENT) -Wall
+# LIBS=$(LIBEVENT)/.libs/libevent.a -lrt
+LIBS=-static -levent
 
 all: libevent_echosrv1 libevent_echosrv2
 
